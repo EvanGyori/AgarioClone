@@ -2,17 +2,24 @@ var cnv = document.getElementById("cnv");
 var ctx = cnv.getContext("2d");
 var moved = false;
 var pelets = [];
+var orbs = [];
 var P1 = {
   xy: [10, 10],
   size: 10,
   wasd: [false, false, false, false],
-  velocity: [0, 0]
+  velocity: [0, 0, 4],
+  acceleration: 0.01,
+  color: "black",
+  stats: [10] //[size smaller player needs to be eaten]
 }
 var P2 = {
   xy: [0.95*window.innerWidth-10, 10],
   size: 10,
   arrowsULDR: [false, false, false ,false], //Arrow keys Up Left Down Right
-  velocity: [0, 0]
+  velocity: [0, 0, 4],
+  acceleration: 0.01,
+  color: "black",
+  stats: [10]
 }
 
 setInterval(function() {
@@ -20,28 +27,48 @@ setInterval(function() {
     P2.arrowsULDR[0]===true || P2.arrowsULDR[1]===true || P2.arrowsULDR[2]===true || P2.arrowsULDR[3]===true) {
       moved = true;
     }
-
+  colorAbility();
   resize();
   for (i = 0; i < pelets.length; i++) {
     ctx.beginPath();
     ctx.arc(pelets[i][0], pelets[i][1], pelets[i][2], 0, 2*Math.PI);
     ctx.stroke();
   }
+  for (i=0; i<orbs.length; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = getOrbColor(orbs[i][2]);
+    ctx.fillStyle = getOrbColor(orbs[i][2]);
+    ctx.arc(orbs[i][0], orbs[i][1], 5, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
   if (moved === true && Math.random() <= 0.005) { createPelet(); }
+  if (moved === true && Math.random() <= 0.0001) { createOrb(); }
   checkForPelet();
+  checkForOrb();
   checkPlOverPl();
   if (moved === false) {
     ctx.font = "12px Arial";
+    ctx.strokStyle = "black";
     ctx.fillText("Player 1 use w, a, s and d keys to move", 10, 50);
     ctx.fillText("Player 2 use up, down, left and right arrow keys to move", 10, 65);
+    ctx.fillText("Colors:", 10, 80);
+    ctx.fillText("Blue: player slides way less", 10, 95);
+    ctx.fillText("Red: other player has to be even bigger in order to eat you", 10, 110);
+    ctx.fillText("Purple: player is slightly faster", 10, 125);
   }
   ctx.beginPath();
+  ctx.strokeStyle = "black";
   ctx.arc(P1.xy[0],P1.xy[1],P1.size,0,2*Math.PI);
+  ctx.fillStyle = P1.color;
+  ctx.fill();
   ctx.stroke();
   Pl1Movement();
 
   ctx.beginPath();
   ctx.arc(P2.xy[0],P2.xy[1],P2.size,0,2*Math.PI);
+  ctx.fillStyle = P2.color;
+  ctx.fill();
   ctx.stroke();
   Pl2Movement();
 
@@ -85,6 +112,17 @@ function createPelet() {
     }
   }
 }
+function createOrb() {
+  if (orbs.length <= 5) {
+    orbs[orbs.length] = [Math.floor(Math.random()*cnv.width), Math.floor(Math.random()*cnv.height), Math.floor(Math.random()*3)];
+  } else {
+    for (i=0; i < orbs.length; i++) {
+      if (orbs[i] === 0) {
+        orbs[i] = [Math.floor(Math.random()*cnv.width), Math.floor(Math.random()*cnv.height), Math.floor(Math.random()*3)];
+      }
+    }
+  }
+}
 function checkForPelet() {
   //Gets distance of player and pelet and tests if distance is <= size of player
   for (i = 0; i < pelets.length; i++) {
@@ -100,17 +138,31 @@ function checkForPelet() {
     }
   }
 }
+function checkForOrb() {
+  for (i=0; i<orbs.length; i++) {
+    //Check Player 1
+    if (Math.sqrt( Math.pow(P1.xy[0] - orbs[i][0],2) + Math.pow(P1.xy[1] - orbs[i][1],2) ) <= P1.size) {
+      P1.color = getOrbColor(orbs[i][2]);
+      orbs[i] = 0;
+    }
+    //Check Player 2
+    if (Math.sqrt( Math.pow(P2.xy[0] - orbs[i][0],2) + Math.pow(P2.xy[1] - orbs[i][1],2) ) <= P2.size) {
+      P2.color = getOrbColor(orbs[i][2]);
+      orbs[i] = 0;
+    }
+  }
+}
 function Pl1Movement() {
   //Player 1 movement
-  if (P1.wasd[2] === true && P1.velocity[1] <= 1) { P1.velocity[1] += 0.01; }
-  if (P1.wasd[2] === false && P1.velocity[1] > 0) { P1.velocity[1] -= 0.0025; }
-  if (P1.wasd[0] === true && P1.velocity[1] >= -1) { P1.velocity[1] -= 0.01; }
-  if (P1.wasd[0] === false && P1.velocity[1] < 0) { P1.velocity[1] += 0.0025; }
+  if (P1.wasd[2] === true && P1.velocity[1] <= P1.acceleration*100) { P1.velocity[1] += P1.acceleration; }
+  if (P1.wasd[2] === false && P1.velocity[1] > 0) { P1.velocity[1] -= P1.acceleration/P1.velocity[2]; }
+  if (P1.wasd[0] === true && P1.velocity[1] >= -P1.acceleration*100) { P1.velocity[1] -= P1.acceleration; }
+  if (P1.wasd[0] === false && P1.velocity[1] < 0) { P1.velocity[1] += P1.acceleration/P1.velocity[2]; }
   P1.xy[1] += P1.velocity[1];
-  if (P1.wasd[1] === true && P1.velocity[0] >= -1) { P1.velocity[0] -= 0.01; }
-  if (P1.wasd[1] === false && P1.velocity[0] < 0) { P1.velocity[0] += 0.0025; }
-  if (P1.wasd[3] === true && P1.velocity[0] <= 1) { P1.velocity[0] += 0.01; }
-  if (P1.wasd[3] === false && P1.velocity[0] > 0) { P1.velocity[0] -= 0.0025; }
+  if (P1.wasd[1] === true && P1.velocity[0] >= -P1.acceleration*100) { P1.velocity[0] -= P1.acceleration; }
+  if (P1.wasd[1] === false && P1.velocity[0] < 0) { P1.velocity[0] += P1.acceleration/P1.velocity[2]; }
+  if (P1.wasd[3] === true && P1.velocity[0] <= P1.acceleration*100) { P1.velocity[0] += P1.acceleration; }
+  if (P1.wasd[3] === false && P1.velocity[0] > 0) { P1.velocity[0] -= P1.acceleration/P1.velocity[2]; }
   P1.xy[0] += P1.velocity[0]
   //Player 1 border enter
   if (P1.xy[0] > cnv.width+P1.size) { P1.xy[0] = -P1.size; }
@@ -120,15 +172,15 @@ function Pl1Movement() {
 }
 function Pl2Movement() {
   //Player 2 movement
-  if (P2.arrowsULDR[2] === true && P2.velocity[1] <= 1) { P2.velocity[1] += 0.01; }
-  if (P2.arrowsULDR[2] === false && P2.velocity[1] > 0) { P2.velocity[1] -= 0.0025; }
-  if (P2.arrowsULDR[0] === true && P2.velocity[1] >= -1) { P2.velocity[1] -= 0.01; }
-  if (P2.arrowsULDR[0] === false && P2.velocity[1] < 0) { P2.velocity[1] += 0.0025; }
+  if (P2.arrowsULDR[2] === true && P2.velocity[1] <= P2.acceleration*100) { P2.velocity[1] += P2.acceleration; }
+  if (P2.arrowsULDR[2] === false && P2.velocity[1] > 0) { P2.velocity[1] -= P2.acceleration/P2.velocity[2]; }
+  if (P2.arrowsULDR[0] === true && P2.velocity[1] >= -P2.acceleration*100) { P2.velocity[1] -= P2.acceleration; }
+  if (P2.arrowsULDR[0] === false && P2.velocity[1] < 0) { P2.velocity[1] += P2.acceleration/P2.velocity[2]; }
   P2.xy[1] += P2.velocity[1];
-  if (P2.arrowsULDR[1] === true && P2.velocity[0] >= -1) { P2.velocity[0] -= 0.01; }
-  if (P2.arrowsULDR[1] === false && P2.velocity[0] < 0) { P2.velocity[0] += 0.0025; }
-  if (P2.arrowsULDR[3] === true && P2.velocity[0] <= 1) { P2.velocity[0] += 0.01; }
-  if (P2.arrowsULDR[3] === false && P2.velocity[0] > 0) { P2.velocity[0] -= 0.0025; }
+  if (P2.arrowsULDR[1] === true && P2.velocity[0] >= -P2.acceleration*100) { P2.velocity[0] -= P2.acceleration; }
+  if (P2.arrowsULDR[1] === false && P2.velocity[0] < 0) { P2.velocity[0] += P2.acceleration/P2.velocity[2]; }
+  if (P2.arrowsULDR[3] === true && P2.velocity[0] <= P2.acceleration*100) { P2.velocity[0] += P2.acceleration; }
+  if (P2.arrowsULDR[3] === false && P2.velocity[0] > 0) { P2.velocity[0] -= P2.acceleration/P2.velocity[2]; }
   P2.xy[0] += P2.velocity[0];
   //Player 2 border enter
   if (P2.xy[0] > cnv.width+P2.size) { P2.xy[0] = -P2.size; }
@@ -139,13 +191,74 @@ function Pl2Movement() {
 function checkPlOverPl() {
   //Gets the distance between the two players and has the bigger player kill the smaller player
   //Check Player 1
-  if (Math.sqrt( Math.pow(P1.xy[0] - P2.xy[0],2) + Math.pow(P1.xy[1] - P2.xy[1],2) ) <= P1.size && P1.size > P2.size + 10) {
+  if (Math.sqrt( Math.pow(P1.xy[0] - P2.xy[0],2) + Math.pow(P1.xy[1] - P2.xy[1],2) ) <= P1.size && P1.size > P2.size + P2.stats[0]) {
     P1.size += P2.size;
     P2.size = 0;
   }
   //Check Player 2
-  if (Math.sqrt( Math.pow(P2.xy[0] - P1.xy[0],2) + Math.pow(P2.xy[1] - P1.xy[1],2) ) <= P2.size && P2.size > P1.size + 10) {
+  if (Math.sqrt( Math.pow(P2.xy[0] - P1.xy[0],2) + Math.pow(P2.xy[1] - P1.xy[1],2) ) <= P2.size && P2.size > P1.size + P1.stats[0]) {
     P2.size += P1.size;
     P1.size = 0;
+  }
+}
+function getOrbColor(x) {
+  switch (x) {
+    case 0:
+      return "red";
+      break;
+    case 1:
+      return "blue";
+      break;
+    case 2:
+      return "purple";
+      break;
+  }
+}
+function colorAbility() {
+  //Abilities for player 1
+  switch (P1.color) {
+    case "black":
+      P1.velocity[2] = 4;
+      P1.stats[0] = 10;
+      P1.acceleration = 0.01;
+      break;
+    case "blue":
+      P1.velocity[2] = 1;
+      P1.stats[0] = 10;
+      P1.acceleration = 0.01;
+      break;
+    case "red":
+      P1.velocity[2] = 4;
+      P1.stats[0] = 20;
+      P1.acceleration = 0.01;
+      break;
+    case "purple":
+      P1.velocity[2] = 4;
+      P1.stats[0] = 10;
+      P1.acceleration = 0.011;
+      break;
+  }
+  //Abilities for player 2
+  switch (P2.color) {
+    case "black":
+      P2.velocity[2] = 4;
+      P2.stats[0] = 10;
+      P2.acceleration = 0.01;
+      break;
+    case "blue":
+      P2.velocity[2] = 1;
+      P2.stats[0] = 10;
+      P2.acceleration = 0.01;
+      break;
+    case "red":
+      P2.velocity[2] = 4;
+      P2.stats[0] = 20;
+      P2.acceleration = 0.01;
+      break;
+    case "purple":
+      P2.velocity[2] = 4;
+      P2.stats[0] = 10;
+      P2.acceleration = 0.011;
+      break;
   }
 }
