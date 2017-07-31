@@ -21,6 +21,7 @@ var P2 = {
   color: "black",
   stats: [10]
 }
+var spikes = [];
 
 setInterval(function() {
   if (P1.wasd[0]===true || P1.wasd[1]===true || P1.wasd[2]===true || P1.wasd[3]===true ||
@@ -29,6 +30,12 @@ setInterval(function() {
     }
   colorAbility();
   resize();
+  if (moved === true) {
+    ctx.fillStyle = "grey";
+    ctx.rect(cnv.width*0.5-15, cnv.height*0.5-15, 30, 30);
+    ctx.fill();
+    ctx.stroke();
+  }
   for (i = 0; i < pelets.length; i++) {
     ctx.beginPath();
     ctx.arc(pelets[i][0], pelets[i][1], pelets[i][2], 0, 2*Math.PI);
@@ -50,6 +57,7 @@ setInterval(function() {
   if (moved === false) {
     ctx.font = "12px Arial";
     ctx.strokStyle = "black";
+    ctx.fillStyle = "black";
     ctx.fillText("Player 1 use w, a, s and d keys to move", 10, 50);
     ctx.fillText("Player 2 use up, down, left and right arrow keys to move", 10, 65);
     ctx.fillText("Colors:", 10, 80);
@@ -72,7 +80,19 @@ setInterval(function() {
   ctx.stroke();
   Pl2Movement();
 
+  for (i=0; i<spikes.length; i++) {
+    ctx.beginPath();
+    ctx.arc(spikes[i][0], spikes[i][1], 10, 0, 2*Math.PI);
+    ctx.fillStyle = "grey";
+    ctx.fill();
+    ctx.stroke();
+  }
+  spikeAI();
+  checkForSpike();
 }, 1);
+setInterval(function() {
+  if (moved === true) { createSpike(); }
+}, 6000);
 
 $(function() {
   $(document).keyup(function(evt){
@@ -98,6 +118,9 @@ $(function() {
   });
 });
 
+function createSpike() {
+  spikes[spikes.length] = [cnv.width*0.5-5, cnv.height*0.5-5];
+}
 function resize() {
   cnv.width = window.innerWidth*0.95;
   cnv.height = window.innerHeight*0.95;
@@ -260,5 +283,50 @@ function colorAbility() {
       P2.stats[0] = 10;
       P2.acceleration = 0.011;
       break;
+  }
+}
+function spikeAI() {
+  for (i=0; i<spikes.length; i++) {
+    //Moves randomly
+    spikes[i][0] += Math.random();
+    spikes[i][0] -= Math.random();
+    spikes[i][1] += Math.random();
+    spikes[i][1] -= Math.random();
+    //Follows greater player
+    if (P1.size > P2.size && P1.size > 10) {
+      if (spikes[i][0] < P1.xy[0] && Math.random() <= 0.5) {
+        spikes[i][0] += Math.random()/3;
+      } else if (spikes[i][0] > P1.xy[0] && Math.random() <= 0.5) {
+        spikes[i][0] -= Math.random()/3;
+      }
+      if (spikes[i][1] < P1.xy[1] && Math.random() <= 0.5) {
+        spikes[i][1] += Math.random()/3;
+      } else if (spikes[i][1] > P1.xy[1] && Math.random() <= 0.5) {
+        spikes[i][1] -= Math.random()/3;
+      }
+    } else if (P2.size > 10) {
+      if (spikes[i][0] < P2.xy[0] && Math.random() <= 0.5) {
+        spikes[i][0] += Math.random()/3;
+      } else if (spikes[i][0] > P2.xy[0] && Math.random() <= 0.5) {
+        spikes[i][0] -= Math.random()/3;
+      }
+      if (spikes[i][1] < P2.xy[1] && Math.random() <= 0.5) {
+        spikes[i][1] += Math.random()/3;
+      } else if (spikes[i][1] > P2.xy[1] && Math.random() <= 0.5) {
+        spikes[i][1] -= Math.random()/3;
+      }
+    }
+  }
+}
+function checkForSpike() {
+  for (i=0; i<spikes.length; i++) {
+    //Checks Player 1
+    if (Math.sqrt( Math.pow(P1.xy[0] - spikes[i][0],2) + Math.pow(P1.xy[1] - spikes[i][1],2) ) <= P1.size && P1.size > 10 && Math.random() <= 0.1) {
+      P1.size -= 0.1;
+    }
+    //Checks Player 2
+    if (Math.sqrt( Math.pow(P2.xy[0] - spikes[i][0],2) + Math.pow(P2.xy[1] - spikes[i][1],2) ) <= P2.size && P2.size > 10 && Math.random() <= 0.1) {
+      P2.size -= 0.1;
+    }
   }
 }
