@@ -1,4 +1,4 @@
-# TestGame
+# Argario Clone
 One of my very first programs. Made in 2017.
 
 ## Overview
